@@ -19,10 +19,24 @@ def show_account():
             print(f'{item["asset"]} balance: {item["free"]}')
 
 
+def test2():
+    data = binhelper.req_account()
+    print(data)
+
+
 def test():
     print('==== TEST ====')
-    print(binhelper.req_public('ONGBTC', 'averagePrice'))
-    print(binhelper.req_public('ONGBTC', 'ticker24h'))
+    #print(show_account())
+    #print(f'Average price (5m): {binhelper.req_public('BNBBTC', 'averagePrice')})
+    ticker24 = binhelper.req_public('BNBBTC', 'ticker24h')
+    print(f'Bid: {ticker24["bidPrice"]}')
+    print(f'Ask: {ticker24["askPrice"]}')
+    res = binhelper.order('BNBBTC', 'BUY', 'LIMIT', 0.1, float(ticker24['askPrice']))
+    try:
+        print(res.json())
+    except Exception as e:
+        print(res)
+    #print(binhelper.req_public('BNBBTC', 'ticker'))
 
 
 if __name__ == "__main__":
