@@ -1,49 +1,78 @@
-import binhelper
+from helpers import binance
+import logging as log
 import time
+import views
 
 
 def show_account():
-    data = binhelper.req_account()
-    print('===== PERMISIONS =====')
-    print(f'Can trade: {data["canTrade"]}')
-    print(f'Can deposit: {data["canDeposit"]}')
-    print(f'Can wthdraw: {data["canWithdraw"]}')
-    print('===== FEES =====')
-    print(f'Maker commission: {data["makerCommission"]}')
-    print(f'Taker commission: {data["takerCommission"]}')
-    print(f'Buyer commission: {data["buyerCommission"]}')
-    print(f'Seller commission: {data["sellerCommission"]}')
-    print('===== BALANCES =====')
-    for item in data["balances"]:
-        if float(item["free"]) > 0:
-            print(f'{item["asset"]} balance: {item["free"]}')
-
-
-def test2():
-    data = binhelper.req_account()
-    print(data)
-
-
-def test():
-    print('==== TEST ====')
-    #print(show_account())
-    #print(f'Average price (5m): {binhelper.req_public('BNBBTC', 'averagePrice')})
-    ticker24 = binhelper.req_public('BNBBTC', 'ticker24h')
-    print(f'Bid: {ticker24["bidPrice"]}')
-    print(f'Ask: {ticker24["askPrice"]}')
-    res = binhelper.order('BNBBTC', 'BUY', 'LIMIT', 0.1, float(ticker24['askPrice']))
+    res = binance.req_account()
     try:
-        print(res.json())
+        views.order(res.json())
     except Exception as e:
-        print(res)
-    #print(binhelper.req_public('BNBBTC', 'ticker'))
+        print(f'*** ERROR FOUND: {e}')
+        print(f'*** RESULT: {res}')
+
+
+def show_balance():
+    views.balance()
+
+
+def show_symbol(symbol):
+    views.symbol_price(symbol)
+
+
+def test(coin, side, qty, price):
+    symbol = f'{coin}BTC'
+    print(f'===== {side} {symbol} =====')
+    views.symbol_price(coin)
+    # Settings
+    if side == 'BUY':
+        order_type = 'MARKET'
+        # When buying quantity is in btc
+        quantity = qty
+    else:
+        order_type = 'LIMIT'
+        # When buying quantity is in assets
+        quantity = qty
+    # PLACE ORDER
+    res = binance.order(symbol, side, order_type, quantity, price)
+    try:
+        views.order(res.json())
+        return res.json()
+    except Exception as e:
+        print(f'*** ERROR: {res}')
+        return res
+
+
+def order_test():
+    coin = 'RDN'
+    response = test(coin, 'BUY', 0.0001, None)
+    if 'orderId' in response:
+        buy_price = response['fills'][0]['price']
+        print(f'*** EXECUTING ORDER {response["status"]}')
+        print(f'BUY price = {buy_price}')
+        sell_price = round(float(buy_price) * 1.01, 8)
+
+        print(f'SELL at = {sell_price}')
+        qty = response['fills'][0]['qty']
+        time.sleep(3)
+        sell_response = test(coin, 'SELL', qty, sell_price)
+        print(f'SELL RESPONSE:\n{sell_response}')
+    else:
+        print(f'*** ORDER FAILED:\n{response}')
 
 
 if __name__ == "__main__":
+    # Log settings
+    log_format = '%(asctime)s - %(message)s'
+    log.basicConfig(filename='server.log', format=log_format, level=log.DEBUG)
     # Start counting elapsed time
     init_time = time.perf_counter()
     # DO THE THING
-    test()
+    order_test()
+    #show_account()
+    show_balance()
+    #show_symbol('BNB')
     # Stop counting elapsed time
     elapsed = round(time.perf_counter() - init_time, 2)
     print(f'*** Elapsed time: {elapsed} s ***\n.')
