@@ -40,19 +40,20 @@ def test(coin, side, qty, price):
         views.order(res.json())
         return res.json()
     except Exception as e:
-        print(f'*** ERROR: {res}')
+        print(f'*** ERROR: {res}\n{e}')
         return res
 
 
 def order_test():
-    coin = 'RDN'
-    response = test(coin, 'BUY', 0.0001, None)
+    coin = 'TRX'
+    response = test(coin, 'SELL', '1100', '0.00000088')
     if 'orderId' in response:
+        # BUY
         buy_price = response['fills'][0]['price']
         print(f'*** EXECUTING ORDER {response["status"]}')
         print(f'BUY price = {buy_price}')
         sell_price = round(float(buy_price) * 1.01, 8)
-
+        # SELL at 1.01
         print(f'SELL at = {sell_price}')
         qty = response['fills'][0]['qty']
         time.sleep(3)
@@ -66,13 +67,12 @@ if __name__ == "__main__":
     # Log settings
     log_format = '%(asctime)s - %(message)s'
     log.basicConfig(filename='server.log', format=log_format, level=log.DEBUG)
-    # Start counting elapsed time
+    # === Start counting elapsed time
     init_time = time.perf_counter()
     # DO THE THING
-    order_test()
-    #show_account()
+    #test('SFP', 'BUY', 0.00095340, 0.000032)
     show_balance()
-    #show_symbol('BNB')
-    # Stop counting elapsed time
+    show_symbol('SFP')
+    # === Stop counting elapsed time
     elapsed = round(time.perf_counter() - init_time, 2)
     print(f'*** Elapsed time: {elapsed} s ***\n.')
