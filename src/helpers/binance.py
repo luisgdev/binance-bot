@@ -10,66 +10,86 @@ import hmac
 url = 'https://api.binance.com'
 public_endpoint = {
     "time": "/api/v3/time",
-    "averagePrice": "/api/v3/avgPrice",
-    "ticker24h": "/api/v3/ticker/24hr",
-    "ticker": "/api/v3/ticker/price"
+    "avgprice": "/api/v3/avgPrice",
+    "ticker_24h": "/api/v3/ticker/24hr",
+    "ticker_price": "/api/v3/ticker/price"
 }
 signed_endpoint = {
     "account": "/api/v3/account",
-    "test_order": "/api/v3/order/test",
-    "order": "/api/v3/order"
+    "order_test": "/api/v3/order/test",
+    "order": "/api/v3/order",
+    "mytrades": "/api/v3/myTrades"
 }
 
-# =============================
-# GET A SIMPLE SIGNATURE
+#   GENERATE A SIGNATURE
 # =============================
 def create_signature():
     secret_key = auth.get_key('secretKey')
     # Get Server Timestamp
     server_time = requests.get(url + public_endpoint['time']).json()['serverTime']
+    # The only param is timestamp
     params = {
         "timestamp": server_time
     }
-    # Generate Signature
-    signature = hmac.new(secret_key.encode('utf-8'), parse.urlencode(params).encode('utf-8'), hashlib.sha256).hexdigest()    
+    # Create Signature
+    signature = hmac.new(
+        secret_key.encode('utf-8'), 
+        parse.urlencode(params).encode('utf-8'), 
+        hashlib.sha256).hexdigest()    
+    # Add signature to params
     params["signature"] = signature
     return params
 
 
-# =============================
-# GET PARAMS SIGNED
+#   GET PARAMS SIGNED
 # =============================
 def sign_params(params):
     secret_key = auth.get_key('secretKey')
     # Get Server Timestamp
     server_time = requests.get(url + public_endpoint['time']).json()['serverTime']
+    # Add timestamp to params
     params['timestamp'] = server_time
-    # Generate Signature
-    signature = hmac.new(secret_key.encode('utf-8'), parse.urlencode(params).encode('utf-8'), hashlib.sha256).hexdigest()    
-    res = {
-        "signature": signature
-    }
-    return res
+    # Create Signature
+    signature = hmac.new(
+        secret_key.encode('utf-8'), 
+        parse.urlencode(params).encode('utf-8'), 
+        hashlib.sha256).hexdigest()
+    return {"signature": signature}
 
 
+#   GET ACCOUNT INFORMATION
 # =============================
-# GET ACCOUNT DATA
-# =============================
-def req_account():
+def get_account():
     api_key = auth.get_key('apiKey')
-    endpoint = signed_endpoint['account']
     signed_params = create_signature()
-    response = requests.get(url + endpoint, params=signed_params, headers={"X-MBX-APIKEY": api_key})
+    response = requests.get(
+        url + signed_endpoint['account'], 
+        params=signed_params, 
+        headers={"X-MBX-APIKEY": api_key})
     result = response.json()
     return result
 
 
-# ==============================
+#   GET TRADES  of a certain pair
+# ===============================
+def get_trades(coin):
+    api_key = auth.get_key('apiKey')
+    params = {
+        "symbol": coin
+    }
+    params.update(sign_params(params))
+    response = requests.get(
+        url + signed_endpoint['mytrades'], 
+        params=params, 
+        headers={"X-MBX-APIKEY": api_key})
+    result = response.json()
+    return result
+
+
 # CREATE AN ORDER  side:BUY/SELL
 # ==============================
 def order(symbol, side, ordertype, quantity, price):
     api_key = auth.get_key('apiKey')
-    endpoint = signed_endpoint['order']
     params = {
         "symbol": symbol,
         "side": side,
@@ -82,20 +102,22 @@ def order(symbol, side, ordertype, quantity, price):
         params['price'] = price
         params['quantity'] = quantity
     params.update(sign_params(params))
-    response = requests.post(url + endpoint, params=params, headers={"X-MBX-APIKEY": api_key})
-    #result = response.json()
+    response = requests.post(
+        url + signed_endpoint['order'], 
+        params=params, 
+        headers={"X-MBX-APIKEY": api_key})
     return response
 
 
-# =============================
-# GET PUBLIC DATA FROM API
-# =============================
-def req_public(coin, api_url):
-    endpoint = public_endpoint[api_url]
+#   GET PUBLIC DATA  no sign nedded
+# =================================
+def get_public(coin, api_function):
     params = {
         "symbol": coin
     }
-    response = requests.get(url + endpoint, params=params)
+    response = requests.get(
+        url + public_endpoint[api_function], 
+        params=params)
     result = response.json()
     return result
 

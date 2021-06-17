@@ -1,8 +1,8 @@
 import re
 #from helpers import scraper
 # Pylance doesn't recognize helpers module on prev sentence.
-import helpers.scraper as scraper
-
+# import helpers.scraper as scraper
+import scraper
 
 # Words to ignore: result, proof, hit, missed, warning
 

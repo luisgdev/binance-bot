@@ -5,20 +5,12 @@ import views
 
 
 def show_account():
-    res = binance.req_account()
+    res = binance.get_account()
     try:
         views.order(res.json())
     except Exception as e:
         print(f'*** ERROR FOUND: {e}')
         print(f'*** RESULT: {res}')
-
-
-def show_balance():
-    views.balance()
-
-
-def show_symbol(symbol):
-    views.symbol_price(symbol)
 
 
 def test(coin, side, qty, price):
@@ -44,35 +36,27 @@ def test(coin, side, qty, price):
         return res
 
 
-def order_test():
-    coin = 'TRX'
-    response = test(coin, 'SELL', '1100', '0.00000088')
-    if 'orderId' in response:
-        # BUY
-        buy_price = response['fills'][0]['price']
-        print(f'*** EXECUTING ORDER {response["status"]}')
-        print(f'BUY price = {buy_price}')
-        sell_price = round(float(buy_price) * 1.01, 8)
-        # SELL at 1.01
-        print(f'SELL at = {sell_price}')
-        qty = response['fills'][0]['qty']
-        time.sleep(3)
-        sell_response = test(coin, 'SELL', qty, sell_price)
-        print(f'SELL RESPONSE:\n{sell_response}')
-    else:
-        print(f'*** ORDER FAILED:\n{response}')
-
-
 if __name__ == "__main__":
     # Log settings
     log_format = '%(asctime)s - %(message)s'
     log.basicConfig(filename='server.log', format=log_format, level=log.DEBUG)
-    # === Start counting elapsed time
     init_time = time.perf_counter()
-    # DO THE THING
-    #test('SFP', 'BUY', 0.00095340, 0.000032)
-    show_balance()
-    show_symbol('SFP')
-    # === Stop counting elapsed time
+    # --------------------------------
+    # Menu Interface
+    command = ''
+    while command != 'x':
+        print(f'{"--"*15}\n*** BINANCE BOT ***\n{"--"*15}')
+        menu = ' a) Account Balance\n b) Price of a coin\n c) Profit Stats\n x) Exit'
+        command = input(f'{menu}\n > ').lower()
+        if command == 'a':
+            views.balance()
+        elif command == 'b':
+            coin = input('> Coin symbol: ').upper()
+            views.symbol_price(coin)
+        elif command == 'c':
+            pairs = input('Enter pairs p1,p2,pn: ').upper()
+            views.profit_stats(pairs.replace(' ', '').split(','))
+        command = input('> Any key to continue: ').lower()
+    # --------------------------------
     elapsed = round(time.perf_counter() - init_time, 2)
     print(f'*** Elapsed time: {elapsed} s ***\n.')

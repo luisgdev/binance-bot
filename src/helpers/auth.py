@@ -19,4 +19,3 @@ def get_key(name):
 
 if __name__ == "__main__":
     print('This is not main!')
-    
