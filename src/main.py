@@ -4,11 +4,18 @@ if __name__ == "__main__":
     # Menu Interface
     command = ""
     while command != "x":
-        print(f'{"--"*15}\n*** BINANCE BOT ***\n{"--"*15}')
-        menu = " a) Account\n b) Balance\n c) Price of coin\n"
-        menu += " d) Profit Stats\n e) New Order\n x) Exit"
-        command = input(f"{menu}\n > ").lower()
-        if command in ["a", "A"]:
+        print("""
+    *** BINANCE BOT ***
+    a) Account
+    b) Balance
+    c) Price of coin
+    d) Profit Stats
+    e) New Order
+    f) Open orders
+    g) Cancel order
+    x) Exit """)
+        command = input(" > ").lower()
+        if command == "a":
             views.account()
         elif command == "b":
             views.balance()
@@ -18,7 +25,16 @@ if __name__ == "__main__":
         elif command == "d":
             pairs = input("Pairs (E.g. CAKEBNB,BNBBTC): ").upper()
             views.profit_stats(pairs.replace(" ", "").split(","))
-        elif command in ["e", "E"]:
-            print("Creating New Order.")
+        elif command == "e":
+            print("Creating New Order..")
             views.order()
-        command = input("> Any key to continue: ").lower()
+        elif command == "f":
+            print("Fetching open Orders..")
+            views.open_orders()
+        elif command == "g":
+            print("Fetching open Orders..")
+            views.cancel_order()
+        elif command == "x":
+            break
+        else:
+            command = input("> Any key to continue: ").lower()

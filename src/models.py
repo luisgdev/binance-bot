@@ -16,6 +16,7 @@ class AvgPrice(BaseModel):
 class NewOrder(BaseModel):
     symbol: str
     side: str
+    type_: str
     qty: float
     price: Optional[float]
 
@@ -63,7 +64,7 @@ class Order(BaseModel):
     order_id: int
     order_list_id: int
     client_order_id: str
-    transact_time: int
+    transact_time: Optional[int]
     price: str
     executed_qty: str
     cummulative_quote_qty: str
@@ -72,6 +73,13 @@ class Order(BaseModel):
     type_: str
     side: str
     fills: Optional[List[Fill]]
+    stop_price: Optional[str]
+    iceberg_qty: Optional[str]
+    time: Optional[int]
+    update_time: Optional[int]
+    is_working: Optional[bool]
+    orig_quote_order_qty: Optional[str]
+    orig_qty: Optional[str]
 
     class Config:
         fields: dict = {
@@ -81,6 +89,14 @@ class Order(BaseModel):
             "client_order_id": "clientOrderId",
             "executed_qty": "executedQty",
             "time_in_force": "timeInForce",
+            "transact_time": "transactTime",
+            "cummulative_quote_qty": "cummulativeQuoteQty",
+            "stop_price": "stopPrice",
+            "iceberg_qty": "icebergQty",
+            "update_time": "updateTime",
+            "is_working": "isWorking",
+            "orig_quote_order_qty": "origQuoteOrderQty",
+            "orig_qty": "origQty"
         }
 
 

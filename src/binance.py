@@ -1,11 +1,14 @@
 import hashlib
 import hmac
 from os import environ
+import sys
 from typing import Callable, Dict, List, Optional
 from urllib import parse
+import pydantic
 
 import requests
 from dotenv import load_dotenv
+from requests.models import Response
 
 from models import Account, AvgPrice, NewOrder, Order, Ticker, Trade
 
@@ -23,6 +26,7 @@ private: Dict[str, str] = {
     "order_test": "/api/v3/order/test",
     "order": "/api/v3/order",
     "my_trades": "/api/v3/myTrades",
+    "open_orders": "/api/v3/openOrders",
 }
 
 
@@ -56,12 +60,22 @@ class Binance:
 
     def get_avg_price(self, symbol: str) -> AvgPrice:
         data: dict = self._get_public(symbol, "avg_price")
-        price: AvgPrice = AvgPrice(**data)
+        try:
+            price: AvgPrice = AvgPrice(**data)
+        except pydantic.error_wrappers.ValidationError:
+            print(f"*** ValidationError")
+            print(data)
+            sys.exit()
         return price
 
     def get_latest_price(self, symbol: str) -> Ticker:
         data: dict = self._get_public(symbol, "last_price")
-        price: Ticker = Ticker(**data)
+        try:
+            price: Ticker = Ticker(**data)
+        except pydantic.error_wrappers.ValidationError:
+            print(f"*** ValidationError")
+            print(data)
+            sys.exit()
         return price
 
     def get_account(self) -> Account:
@@ -70,7 +84,12 @@ class Binance:
             params=self._sign_params(),
             headers={"X-MBX-APIKEY": self.api_key},
         ).json()
-        data: Account = Account(**response)
+        try:
+            data: Account = Account(**response)
+        except pydantic.error_wrappers.ValidationError:
+            print(f"*** ValidationError")
+            print(response)
+            sys.exit()
         return data
 
     def get_trades(self, symbol: str) -> List[Trade]:
@@ -80,8 +99,36 @@ class Binance:
             headers={"X-MBX-APIKEY": self.api_key},
         ).json()
         update: Callable[[dict], Trade] = lambda t: Trade(**t)
-        data: List[Trade] = list(map(update, response))
+        try:
+            data: List[Trade] = list(map(update, response))
+        except pydantic.error_wrappers.ValidationError:
+            print("*** ValidationError")
+            print(response)
+            sys.exit()
         return data
+
+    def get_open_orders(self) -> List[Order]:
+        response: dict = requests.get(
+            url=self.url + private["open_orders"],
+            params=self._sign_params(),
+            headers={"X-MBX-APIKEY": self.api_key},
+        ).json()
+        update: Callable[[dict], Trade] = lambda x: Order(**x)
+        try:
+            data: List[Order] = list(map(update, response))
+        except pydantic.error_wrappers.ValidationError:
+            print("*** ValidationError")
+            print(response)
+            sys.exit()
+        return data
+
+    def cancel_open_order(self, symbol: str, order_id: int) -> Order:
+        response: dict = requests.delete(
+            url=self.url + private["order"],
+            params=self._sign_params({"symbol": symbol, "orderId": order_id}),
+            headers={"X-MBX-APIKEY": self.api_key},
+        ).json()
+        return Order(**response)
 
     def create_order(self, order: NewOrder) -> Order:
         """
@@ -93,22 +140,27 @@ class Binance:
             specify how much USDT the user is going to spend or receive.
         """
         params: dict = {"symbol": order.symbol, "side": order.side}
-        if order.side.upper() == "BUY":
-            # Let's use MARKET orders to BUY...
-            # ... And LIMIT orders to SELL
+        # Let's use MARKET orders to BUY...
+        # ... And LIMIT orders to SELL
+        if order.type_ in ["M", "MARKET"]:
             params["type"] = "MARKET"
-            params["quoteOrderQty"] = order.qty
-        elif order.side.upper() == "SELL":
+            # params["quoteOrderQty"] = order.qty
+        elif order.type_ in ["L", "LIMIT"]:
             params["type"] = "LIMIT"
             params["timeInForce"] = "GTC"
             params["price"] = order.price
-            params["quantity"] = order.qty
+        params["quantity"] = order.qty
         response: dict = requests.post(
             url=self.url + private["order"],
             params=self._sign_params(params),
             headers={"X-MBX-APIKEY": self.api_key},
         ).json()
-        data: Order = Order(**response)
+        try:
+            data: Order = Order(**response)
+        except pydantic.error_wrappers.ValidationError:
+            print(f"*** ValidationError")
+            print(response)
+            sys.exit()
         return data
 
 
