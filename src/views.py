@@ -10,22 +10,25 @@ log.basicConfig(
     filename="binance.log",
     format="%(asctime)s %(filename)s:%(lineno)d - %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    level=log.INFO
+    level=log.INFO,
 )
 
 b: Binance = Binance()
 
 
 def menu() -> None:
-    print("""
+    print(
+        """
     *** BINANCE BOT ***
-      a) Account
-      b) Balance
-      c) Price of coin
-      d) Profit Stats
-      e) New Order
-      x) Exit
-    """)
+    a) Account
+    b) Balance
+    c) Price of coin
+    d) Profit Stats
+    e) New Order
+    f) Open orders
+    g) Cancel order
+    x) Exit """
+    )
 
 
 def account() -> None:
@@ -61,14 +64,14 @@ def order() -> None:
     elif type_ in ["M", "MARKET"]:
         price = None
     else:
-        assert "Order ´type´ must be 'LIMIT' or 'MARKET' only"
-        print("Error: Order ´type´ must be 'LIMIT' or 'MARKET'.")
+        assert "Order `type` must be 'LIMIT' or 'MARKET' only"
+        print("Error: Order `type` must be 'LIMIT' or 'MARKET'.")
         return None
 
     # Let's make SURE we want to BUY or SELL
     if side not in ["SELL", "BUY"]:
-        assert "Order ´side´ must be 'BUY' or 'SELL' only"
-        print("Error: Order ´side´ must be 'BUY' or 'SELL'.")
+        assert "Order `side` must be 'BUY' or 'SELL' only"
+        print("Error: Order `side` must be 'BUY' or 'SELL'.")
         return None
     order: Order = b.create_order(
         NewOrder(symbol=symbol, side=side, type_=type_, qty=qty, price=price)
@@ -110,12 +113,12 @@ def profit_stats(pairs: List[str]) -> None:
 
 def cancel_order() -> None:
     open_orders()
-    print("--"*15)
+    print("--" * 15)
     print("What order you want to cancel?")
     symbol: str = input("Symbol: ").upper()
     order_id: int = input("Order id: ")
     order: Order = b.cancel_open_order(symbol, order_id)
-    print("--"*15)
+    print("--" * 15)
     print(f"Order ID: {order.order_id}")
     print(f"Symbol  : {order.symbol}")
     print(f"Side    : {order.side}")
@@ -128,7 +131,7 @@ def cancel_order() -> None:
 def open_orders() -> None:
     orders: List[Order] = b.get_open_orders()
     for order in orders:
-        print("--"*15)
+        print("--" * 15)
         print(f"Order ID: {order.order_id}")
         print(f"Symbol  : {order.symbol}")
         print(f"Side    : {order.side}")
@@ -136,6 +139,7 @@ def open_orders() -> None:
         print(f"Orig Qty: {order.orig_qty}")
         print(f"Exec Qty: {order.executed_qty}")
         print(f"Status  : {order.status}")
+
 
 if __name__ == "__main__":
     print("This is not main!")

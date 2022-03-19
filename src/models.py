@@ -96,7 +96,7 @@ class Order(BaseModel):
             "update_time": "updateTime",
             "is_working": "isWorking",
             "orig_quote_order_qty": "origQuoteOrderQty",
-            "orig_qty": "origQty"
+            "orig_qty": "origQty",
         }
 
 

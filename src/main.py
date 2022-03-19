@@ -1,7 +1,12 @@
+"""
+MAIN INTERFACE
+"""
+
+import sys
+
 import views
 
 if __name__ == "__main__":
-    # Menu Interface
     command = ""
     while command != "x":
         print("""
@@ -35,6 +40,6 @@ if __name__ == "__main__":
             print("Fetching open Orders..")
             views.cancel_order()
         elif command == "x":
-            break
+            sys.exit()
         else:
             command = input("> Any key to continue: ").lower()
