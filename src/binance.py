@@ -19,6 +19,7 @@ class Public(object):
     Binance API Endpoints which don't require auth.
     Public endpoints.
     """
+
     time: str = "/api/v3/time"
     avg_price: str = "/api/v3/avgPrice"
     ticker_24h: str = "/api/v3/ticker/24hr"
@@ -30,6 +31,7 @@ class Private(object):
     Binance API Endpoints which require auth.
     Private endpoints, signed requests are nedded.
     """
+
     account: str = "/api/v3/account"
     order_test: str = "/api/v3/order/test"
     order: str = "/api/v3/order"
@@ -46,7 +48,7 @@ class Binance:
         self.base_url: str = "https://api3.binance.com"
         self.api_key: str = environ["API_KEY"]
         self.secret_key: str = environ["SECRET_KEY"]
-    
+
     def _get_url(self, endpoint: str):
         return self.base_url + endpoint
 

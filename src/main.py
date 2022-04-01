@@ -9,7 +9,8 @@ import views
 if __name__ == "__main__":
     command = ""
     while command != "x":
-        print("""
+        print(
+            """
     *** BINANCE BOT ***
     a) Account
     b) Balance
@@ -18,7 +19,8 @@ if __name__ == "__main__":
     e) New Order
     f) Open orders
     g) Cancel order
-    x) Exit """)
+    x) Exit """
+        )
         command = input(" > ").lower()
         if command == "a":
             views.account()

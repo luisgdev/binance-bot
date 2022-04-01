@@ -1,6 +1,10 @@
 import logging as log
 from typing import List, Optional
 
+from rich import box
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.table import Table
 from binance import Binance
 from models import Account, AvgPrice, NewOrder, Order, Ticker, Trade
 
@@ -13,26 +17,41 @@ log.basicConfig(
     level=log.INFO,
 )
 
-b: Binance = Binance()
+binance: Binance = Binance()
+CONSOLE: Console = Console()
+
+MENU: str = """
+# *** BINANCE BOT ***
+- a) Account
+- b) Balance
+- c) Price of coin
+- d) Profit Stats
+- e) New Order
+- f) Open orders
+- g) Cancel order
+- x) Exit
+"""
+
+def print_markdown(text: str) -> None:
+    """
+    Print a string in Markdown format.
+    """
+    md: Markdown = Markdown(text)
+    CONSOLE.print(md)
 
 
 def menu() -> None:
-    print(
-        """
-    *** BINANCE BOT ***
-    a) Account
-    b) Balance
-    c) Price of coin
-    d) Profit Stats
-    e) New Order
-    f) Open orders
-    g) Cancel order
-    x) Exit """
-    )
+    """
+    Show program menu.
+    """
+    print_markdown(MENU)
 
 
 def account() -> None:
-    account: Account = b.get_account()
+    """
+    Show account information.
+    """
+    account: Account = binance.get_account()
     print("===== PERMISIONS =====")
     print(f"Can trade: {account.can_trade}")
     print(f"Can deposit: {account.can_deposit}")
@@ -41,19 +60,26 @@ def account() -> None:
     print(f"Maker commission: {account.maker_commission}")
     print(f"Taker commission: {account.taker_commission}")
     print(f"Buyer commission: {account.buyer_commission}")
-    print(f'Seller commission: {account.seller_commission}\n{"--"*15}')
+    print(f"Seller commission: {account.seller_commission}")
+    print_markdown("---")
 
 
 def balance() -> None:
-    account: Account = b.get_account()
+    """
+    Show balances.
+    """
+    account: Account = binance.get_account()
     print("======= BALANCES ========")
     for balance in account.balances:
         if float(balance.free) > 0:
             print(f"{balance.asset}: {balance.free}")
-    print("--" * 15)
+    print_markdown("---")
 
 
 def order() -> None:
+    """
+    Place an order and show the details.
+    """
     symbol: str = input(" * Symbol (E.g. BNBUSDT): ").upper()
     side: str = input(" * Buy or Sell?: ").upper()
     type_: str = input(" * Limit or Market?: ").upper()
@@ -73,7 +99,7 @@ def order() -> None:
         assert "Order `side` must be 'BUY' or 'SELL' only"
         print("Error: Order `side` must be 'BUY' or 'SELL'.")
         return None
-    order: Order = b.create_order(
+    order: Order = binance.create_order(
         NewOrder(symbol=symbol, side=side, type_=type_, qty=qty, price=price)
     )
     log.info(f"ORDER DETAILS: {order.dict}")
@@ -81,44 +107,46 @@ def order() -> None:
     print(f"Status: {order.status}")
     print(f"Executed Qty: {order.executed_qty}")
     if order.fills:
-        for f in order.fills:
-            print(f" * Price: {f.price}")
-            print(f" * Quantity: {f.qty}")
-            print(f' * Fee ({f.commission_asset}): {f.commission}\n{"--"*15}')
+        for fill in order.fills:
+            print(f" * Price: {fill.price}")
+            print(f" * Quantity: {fill.qty}")
+            print(f' * Fee ({fill.commission_asset}): {fill.commission}')
+            print_markdown("---")
 
 
 def symbol_price(symbol: str) -> None:
-    average: AvgPrice = b.get_avg_price(symbol)
-    latest: Ticker = b.get_latest_price(symbol)
-    print(f'{"--"*15}\n{symbol}')
+    average: AvgPrice = binance.get_avg_price(symbol)
+    latest: Ticker = binance.get_latest_price(symbol)
+    print(f"{symbol}")
     print(f" * Latest Price: {latest.price}")
-    print(f' * Average 5min: {average.price}\n{"--"*15}')
+    print(f" * Average 5min: {average.price}")
+    print_markdown("---")
 
 
 def _trades(pair: str) -> None:
-    trades: List[Trade] = b.get_trades(pair)
-    for t in trades:
-        if t.is_buyer:
-            avg: AvgPrice = b.get_avg_price(pair)
-            roi: float = (float(avg.price) / float(t.price) - 1) * 100
-            print(f"{pair} | {t.price} | {avg.price} | {round(roi, 2)}")
+    trades: List[Trade] = binance.get_trades(pair)
+    for trade in trades:
+        if trade.is_buyer:
+            avg: AvgPrice = binance.get_avg_price(pair)
+            roi: float = (float(avg.price) / float(trade.price) - 1) * 100
+            print(f"{pair} | {trade.price} | {avg.price} | {round(roi, 2)}")
             break
 
 
 def profit_stats(pairs: List[str]) -> None:
     print("Pair | Buy Price | Current Price | Profit")
-    for p in pairs:
-        _trades(p)
+    for pair in pairs:
+        _trades(pair)
 
 
 def cancel_order() -> None:
     open_orders()
-    print("--" * 15)
+    print_markdown("---")
     print("What order you want to cancel?")
     symbol: str = input("Symbol: ").upper()
-    order_id: int = input("Order id: ")
-    order: Order = b.cancel_open_order(symbol, order_id)
-    print("--" * 15)
+    order_id: int = int(input("Order id: "))
+    order: Order = binance.cancel_open_order(symbol, order_id)
+    print_markdown("---")
     print(f"Order ID: {order.order_id}")
     print(f"Symbol  : {order.symbol}")
     print(f"Side    : {order.side}")
@@ -129,9 +157,9 @@ def cancel_order() -> None:
 
 
 def open_orders() -> None:
-    orders: List[Order] = b.get_open_orders()
+    orders: List[Order] = binance.get_open_orders()
     for order in orders:
-        print("--" * 15)
+        print_markdown("---")
         print(f"Order ID: {order.order_id}")
         print(f"Symbol  : {order.symbol}")
         print(f"Side    : {order.side}")
