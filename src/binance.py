@@ -24,6 +24,7 @@ class Public(object):
     avg_price: str = "/api/v3/avgPrice"
     ticker_24h: str = "/api/v3/ticker/24hr"
     last_price: str = "/api/v3/ticker/price"
+    candle: str = "/api/v3/klines"
 
 
 class Private(object):
@@ -59,6 +60,12 @@ class Binance:
         ).json()
         return response
 
+    def _get_public_v2(self, params: dict, api_endpoint: str) -> dict:
+        response: dict = requests.get(
+            url=self._get_url(api_endpoint), params=params
+        ).json()
+        return response
+
     def _sign_params(self, params: dict = {}) -> dict:
         response: dict = self._get_public(None, Public.time)
         params["timestamp"] = response["serverTime"]
@@ -89,6 +96,12 @@ class Binance:
             print(data)
             sys.exit()
         return price
+
+    def get_candlesticks(self, symbol: str) -> None:
+        params = dict(symbol=symbol, interval="1M", startTime=1617249600) # To complete
+        data: dict = self._get_public_v2(params, Public.candle)
+        for item in data:
+            print(f"H: {item[2]} L: {item[3]}")
 
     def get_account(self) -> Account:
         response: dict = requests.get(
@@ -181,3 +194,4 @@ class Binance:
 
 if __name__ == "__main__":
     print("This is not main!")
+    # Binance().get_candlesticks("BTCBUSD")
