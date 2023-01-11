@@ -1,4 +1,5 @@
+inquirer
 python-dotenv
 pydantic
 requests
-
+rich

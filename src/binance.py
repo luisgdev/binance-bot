@@ -1,7 +1,9 @@
+""" Binance API functions """
+
 import hashlib
 import hmac
-from os import environ
 import sys
+from os import environ
 from typing import Callable, Dict, List, Optional
 from urllib import parse
 
@@ -9,35 +11,38 @@ import pydantic
 import requests
 from dotenv import load_dotenv
 
-from models import Account, AvgPrice, NewOrder, Order, Ticker, Trade
+from models import Account, AvgPrice, NewOrder, Order, Response, Ticker, Trade
 
 load_dotenv()
 
+TIMEOUT: int = 30
+API_KEY_HEADER: str = "X-MBX-APIKEY"
 
-class Public(object):
+
+class Public:
     """
     Binance API Endpoints which don't require auth.
     Public endpoints.
     """
 
-    time: str = "/api/v3/time"
     avg_price: str = "/api/v3/avgPrice"
-    ticker_24h: str = "/api/v3/ticker/24hr"
-    last_price: str = "/api/v3/ticker/price"
     candle: str = "/api/v3/klines"
+    last_price: str = "/api/v3/ticker/price"
+    ticker_24h: str = "/api/v3/ticker/24hr"
+    time: str = "/api/v3/time"
 
 
-class Private(object):
+class Private:
     """
     Binance API Endpoints which require auth.
     Private endpoints, signed requests are nedded.
     """
 
     account: str = "/api/v3/account"
-    order_test: str = "/api/v3/order/test"
-    order: str = "/api/v3/order"
     my_trades: str = "/api/v3/myTrades"
     open_orders: str = "/api/v3/openOrders"
+    order: str = "/api/v3/order"
+    order_test: str = "/api/v3/order/test"
 
 
 class Binance:
@@ -50,24 +55,34 @@ class Binance:
         self.api_key: str = environ["API_KEY"]
         self.secret_key: str = environ["SECRET_KEY"]
 
-    def _get_url(self, endpoint: str):
+    def _get_url(self, endpoint: str) -> str:
+        """
+        Return a URL for a given endpoint.
+        :param endpoint: String with the endpoint name.
+        :return: String with endpoint URL.
+        """
         return self.base_url + endpoint
 
-    def _get_public(self, symbol: Optional[str], api_endpoint: str) -> dict:
-        params = {"symbol": symbol} if symbol else {}
+    def _get_public(self, api_endpoint: str, params: dict = {}) -> dict:
+        """
+        Make a request to a public ednpoint and return the response data.
+        :param api_endpoint: String with the endpoint name.
+        :param params: Dict with the params.
+        :return: Dict with the data.
+        """
         response: dict = requests.get(
-            url=self._get_url(api_endpoint), params=params
-        ).json()
-        return response
-
-    def _get_public_v2(self, params: dict, api_endpoint: str) -> dict:
-        response: dict = requests.get(
-            url=self._get_url(api_endpoint), params=params
+            url=self._get_url(api_endpoint), params=params, timeout=TIMEOUT
         ).json()
         return response
 
     def _sign_params(self, params: dict = {}) -> dict:
-        response: dict = self._get_public(None, Public.time)
+        """
+        Generate signature with params.
+        :param params: Dict with the params.
+        :return: Dict with the signed params.
+        """
+        response: dict = self._get_public(api_endpoint=Public.time)
+        print(f"Server time response: {response}")
         params["timestamp"] = response["serverTime"]
         signature: str = hmac.new(
             str.encode(self.secret_key),
@@ -78,102 +93,146 @@ class Binance:
         return params
 
     def get_avg_price(self, symbol: str) -> AvgPrice:
-        data: dict = self._get_public(symbol, Public.avg_price)
+        """
+        Get average price of a cryptocurrency.
+        :param symbol: String with the symbol.
+        :return: AvgPrice object.
+        """
+        data: dict = self._get_public(
+            params={"symbol": symbol}, api_endpoint=Public.avg_price
+        )
         try:
-            price: AvgPrice = AvgPrice(**data)
+            return AvgPrice(**data)
         except pydantic.error_wrappers.ValidationError:
             print(f"*** ValidationError")
-            print(data)
+            print(Response(**data))
             sys.exit()
-        return price
 
     def get_latest_price(self, symbol: str) -> Ticker:
-        data: dict = self._get_public(symbol, Public.last_price)
+        """
+        Get latest price of a cryptocurrency.
+        :param symbol: String with the symbol.
+        :return: Ticker object.
+        """
+        data: dict = self._get_public(
+            params={"symbol": symbol}, api_endpoint=Public.last_price
+        )
         try:
-            price: Ticker = Ticker(**data)
+            return Ticker(**data)
         except pydantic.error_wrappers.ValidationError:
             print(f"*** ValidationError")
-            print(data)
+            print(Response(**data))
             sys.exit()
-        return price
 
     def get_candlesticks(self, symbol: str) -> None:
-        params = dict(symbol=symbol, interval="1M", startTime=1617249600) # To complete
-        data: dict = self._get_public_v2(params, Public.candle)
+        """
+        Show candlesticks of a cryptocurrency.
+        :param symbol: String with the symbol.
+        :return: None.
+        """
+        # TODO: Determine lowest and highest values for a coin.
+        params = dict(symbol=symbol, interval="1M", startTime=1617249600)
+        data: dict = self._get_public(params, Public.candle)
         for item in data:
             print(f"H: {item[2]} L: {item[3]}")
 
     def get_account(self) -> Account:
+        """
+        Get account information.
+        :return: Account object.
+        """
+        params: dict = {"recvWindow": 10000}
         response: dict = requests.get(
             url=self._get_url(Private.account),
-            params=self._sign_params(),
-            headers={"X-MBX-APIKEY": self.api_key},
+            params=self._sign_params(params=params),
+            headers={API_KEY_HEADER: self.api_key},
+            timeout=TIMEOUT,
         ).json()
         try:
-            data: Account = Account(**response)
-        except pydantic.error_wrappers.ValidationError:
+            return Account(**response)
+        except pydantic.error_wrappers.ValidationError as ex:
             print(f"*** ValidationError")
-            print(response)
+            print(Response(**response))
             sys.exit()
-        return data
 
     def get_trades(self, symbol: str) -> List[Trade]:
+        """
+        Get trades of a cryptocurrency.
+        :param symbol: String with the symbol.
+        :return: List of Trade object.
+        """
         response: dict = requests.get(
             url=self._get_url(Private.my_trades),
             params=self._sign_params({"symbol": symbol}),
-            headers={"X-MBX-APIKEY": self.api_key},
+            headers={API_KEY_HEADER: self.api_key},
+            timeout=TIMEOUT,
         ).json()
         try:
             update: Callable[[dict], Trade] = lambda t: Trade(**t)
-            data: List[Trade] = list(map(update, response))
-        except Exception as err:
-            print(f"*** Error: {err.args}")
-            print(response)
+            return list(map(update, response))
+        except pydantic.error_wrappers.ValidationError as ex:
+            print(f"*** ValidationError")
+            print(Response(**response))
             sys.exit()
-        return data
 
     def get_open_orders(self) -> List[Order]:
+        """
+        Get open orders.
+        :return: List of Order object.
+        """
         response: dict = requests.get(
             url=self._get_url(Private.open_orders),
             params=self._sign_params(),
-            headers={"X-MBX-APIKEY": self.api_key},
+            headers={API_KEY_HEADER: self.api_key},
+            timeout=TIMEOUT,
         ).json()
         try:
             update: Callable[[dict], Order] = lambda x: Order(**x)
-            data: List[Order] = list(map(update, response))
+            return list(map(update, response))
         except pydantic.error_wrappers.ValidationError:
             print("*** ValidationError")
-        except Exception as err:
-            print(f"*** Error: {err.args}")
-        finally:
-            print(response)
+            print(Response(**response))
             sys.exit()
-        return data
 
     def cancel_open_order(self, symbol: str, order_id: int) -> Order:
+        """
+        Cancel an open order.
+        :param symbol: String with the symbol.
+        :param order_id: Int with the Order id.
+        :return: Order object.
+        """
         response: dict = requests.delete(
             url=self._get_url(Private.order),
             params=self._sign_params({"symbol": symbol, "orderId": order_id}),
-            headers={"X-MBX-APIKEY": self.api_key},
+            headers={API_KEY_HEADER: self.api_key},
+            timeout=TIMEOUT,
         ).json()
-        return Order(**response)
+        try:
+            return Order(**response)
+        except pydantic.error_wrappers.ValidationError as ex:
+            print("*** ValidationError")
+            print(Response(**response))
+            sys.exit()
 
     def create_order(self, order: NewOrder) -> Order:
         """
         MARKET orders using the `quantity`:
-            Using BTCUSDT for example, sending a MARKET order will
-            specify how much BTC the user is buying or selling.
+        Using BTCUSDT for example, sending a MARKET order will
+        specify how much BTC the user is buying or selling.
         MARKET orders using `quoteOrderQty`:
-            Using BTCUSDT for example, sending a MARKET order will
-            specify how much USDT the user is going to spend or receive.
+        Using BTCUSDT for example, sending a MARKET order will
+        specify how much USDT the user is going to spend or receive.
+        \f
+        :param order: New order object.
+        :return: Order object.
         """
         params: dict = {"symbol": order.symbol, "side": order.side}
         # Let's use MARKET orders to BUY...
         # ... And LIMIT orders to SELL
-        if order.type_ in ["M", "MARKET"]:
+        if order.type_.upper() in ["M", "MARKET"]:
             params["type"] = "MARKET"
             # params["quoteOrderQty"] = order.qty
-        elif order.type_ in ["L", "LIMIT"]:
+        elif order.type_.upper() in ["L", "LIMIT"]:
             params["type"] = "LIMIT"
             params["timeInForce"] = "GTC"
             params["price"] = order.price
@@ -181,17 +240,16 @@ class Binance:
         response: dict = requests.post(
             url=self._get_url(Private.order),
             params=self._sign_params(params),
-            headers={"X-MBX-APIKEY": self.api_key},
+            headers={API_KEY_HEADER: self.api_key},
+            timeout=TIMEOUT,
         ).json()
         try:
-            data: Order = Order(**response)
-        except pydantic.error_wrappers.ValidationError:
-            print(f"*** ValidationError")
-            print(response)
+            return Order(**response)
+        except pydantic.error_wrappers.ValidationError as ex:
+            print("*** ValidationError")
+            print(Response(**response))
             sys.exit()
-        return data
 
 
 if __name__ == "__main__":
-    print("This is not main!")
-    # Binance().get_candlesticks("BTCBUSD")
+    pass

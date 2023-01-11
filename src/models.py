@@ -1,19 +1,45 @@
-from typing import List, Optional
+""" Models """
+
+from typing import List, NamedTuple, Optional
 
 from pydantic import BaseModel
 
+# pylint: disable=too-few-public-methods
+
+
+class Response(BaseModel):
+    """Response error"""
+
+    code: str
+    msg: str
+
+
+class Profit(NamedTuple):
+    """Profit for a symbol"""
+
+    symbol: str
+    qty: float
+    buy_value: float
+    current_value: float
+
 
 class Ticker(BaseModel):
+    """Price ticker"""
+
     symbol: str
     price: str
 
 
 class AvgPrice(BaseModel):
+    """Average price"""
+
     mins: int
     price: str
 
 
 class NewOrder(BaseModel):
+    """New Order model"""
+
     symbol: str
     side: str
     type_: str
@@ -22,6 +48,8 @@ class NewOrder(BaseModel):
 
 
 class Trade(BaseModel):
+    """Trade model"""
+
     symbol: str
     id_: int
     order_id: int
@@ -37,6 +65,8 @@ class Trade(BaseModel):
     is_best_match: bool
 
     class Config:
+        """Trade model config"""
+
         fields: dict = {
             "id_": "id",
             "order_id": "orderId",
@@ -50,16 +80,22 @@ class Trade(BaseModel):
 
 
 class Fill(BaseModel):
+    """Fill model"""
+
     price: str
     qty: str
     commission: str
     commission_asset: str
 
     class Config:
+        """Fill model config"""
+
         fields: dict = {"commission_asset": "commissionAsset"}
 
 
 class Order(BaseModel):
+    """Order model"""
+
     symbol: str
     order_id: int
     order_list_id: int
@@ -82,6 +118,8 @@ class Order(BaseModel):
     orig_qty: Optional[str]
 
     class Config:
+        """Config for order model"""
+
         fields: dict = {
             "type_": "type",
             "order_id": "orderId",
@@ -101,12 +139,16 @@ class Order(BaseModel):
 
 
 class Balance(BaseModel):
+    """Balance model"""
+
     asset: str
     free: str
     locked: str
 
 
 class Account(BaseModel):
+    """Account model"""
+
     maker_commission: int
     taker_commission: int
     buyer_commission: int
@@ -120,6 +162,8 @@ class Account(BaseModel):
     permissions: List[str]
 
     class Config:
+        """Config for account model"""
+
         fields: dict = {
             "maker_commission": "makerCommission",
             "taker_commission": "takerCommission",
